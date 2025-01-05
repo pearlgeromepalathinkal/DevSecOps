@@ -46,7 +46,8 @@ jobs:
           docker build -f Dockerfile -t myapp:latest .
 
       - name: Docker Login
-        run: echo "${{ secrets.REPO_TOKEN }}" | docker login -u "${{ secrets.REPO_USERNAME }}" --password-stdin
+        run: echo "${{ secrets.REPO_TOKEN }}" | docker login -u pearlgerome --password-stdin
+
 
       - name: Install Docker Scout
         run: |
