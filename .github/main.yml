@@ -8,48 +8,79 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
 
-      - name: Install Bandit
-        run: pip install bandit
+    - name: Install Bandit
+      run: pip install bandit
 
-      - name: Run Bandit Scan
-        run: bandit -ll -ii -r . -f json -o bandit-report.json
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: bandit-findings
-          path: bandit-report.json
+    - name: Run Bandit Scan
+      run: bandit -ll -ii -r .
 
   image_scan:
-     name: Build Image and Run Image Scan
-     runs-on: ubuntu-latest
+    name: Build Image and Run Image Scan
+    runs-on: ubuntu-latest
 
-     steps:
-       - name: Checkout code
-         uses: actions/checkout@v2
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-       - name: Set up Docker
-         uses: docker-practice/actions-setup-docker@v1
-         with: 
-           docker_version: '20.10.7'
+    - name: Set up Docker
+      uses: docker-practice/actions-setup-docker@v1
+      with:
+        docker_version: '20.10.7'
 
-       - name: Build Docker Image
-         run: docker build -f Dockerfile -t myapp:latest .
+    - name: Check Docker Version
+      run: docker --version
 
-       - name: Docker Scout Scan
-         run: |
-           curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh -o install-scout.sh
-           sh install-scout.sh
-           echo ${{ secrets.REPO_TOKEN }} | docker login -u ${{ secrets.REPO_USERNAME }} --password-stdin
-           docker scout quickview
-           docker scout cves
-           
+    - name: Verify Docker is Running
+      run: sudo systemctl status docker || echo "Docker service is not running"
+
+    - name: Add Docker Apt Source
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common lsb-release
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    - name: Update APT Cache and Install Docker
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+    - name: Check Docker System Status
+      run: |
+        sudo systemctl status docker
+
+    - name: Show Default Daemon JSON Content (if exists)
+      run: |
+        if [ -f /etc/docker/daemon.json ]; then
+          sudo cat /etc/docker/daemon.json
+        else
+          echo "Daemon.json file does not exist."
+        fi
+
+    - name: Build Docker Image
+      run: docker build -f Dockerfile -t myapp:latest .
+
+    - name: Docker Login
+      run: docker login -u pearlgerome -p 1W3H7d9FFm3Ae0aSvBajTQmd9sQ
+
+    - name: Docker Scout Scan
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh -o install-scout.sh
+        sh install-scout.sh
+        docker scout quickview
+        docker scout cves
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: docker-scout-findings
+        path: scout-report.sarif
