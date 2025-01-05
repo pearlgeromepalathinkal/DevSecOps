@@ -8,18 +8,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Docker
+      # Step 2: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # Step 3: Log in to Docker
       - name: Docker Login
         run: echo "${{ secrets.REPO_TOKEN }}" | docker login -u "${{ secrets.REPO_USERNAME }}" --password-stdin
 
+      # Step 4: Build Docker image
       - name: Build Docker Image
         run: docker build -f Dockerfile -t myapp:latest .
 
+      # Step 5: Run Docker Scout Scan
       - name: Run Docker Scout Scan
         run: |
           docker scout quickview
