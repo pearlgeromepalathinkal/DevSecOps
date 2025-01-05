@@ -1,7 +1,7 @@
 name: CI
 
 on: [push]
- 
+  
 jobs:
  sast_scan:
    name: Run Bandit Scan
