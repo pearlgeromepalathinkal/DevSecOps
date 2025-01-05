@@ -8,64 +8,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
 
-    - name: Install Bandit
-      run: pip install bandit
+      - name: Install Bandit
+        run: pip install bandit
 
-    - name: Run Bandit Scan
-      run: bandit -ll -ii -r .
+      - name: Run Bandit Scan
+        run: bandit -ll -ii -r . -f json -o bandit-report.json
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: bandit-findings
+          path: bandit-report.json
 
   image_scan:
-    name: Build Image and Run Image Scan
-    runs-on: ubuntu-latest
+     name: Build Image and Run Image Scan
+     runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+     steps:
+       - name: Checkout code
+         uses: actions/checkout@v2
 
-    - name: Set up Docker
-      uses: docker-practice/actions-setup-docker@v1
-      with:
-        docker_version: '20.10.7'
+       - name: Set up Docker
+         uses: docker-practice/actions-setup-docker@v1
+         with: 
+           docker_version: '20.10.7'
 
-    - name: Check Docker Version
-      run: docker --version
+       - name: Build Docker Image
+         run: docker build -f Dockerfile -t myapp:latest .
 
-    - name: Verify Docker is Running
-      run: sudo systemctl status docker || echo "Docker service is not running"
-
-    - name: Uninstall docker-compose-plugin (if installed)
-      run: sudo apt-get remove --purge docker-compose-plugin || echo "docker-compose-plugin not installed"
-
-    - name: Install Latest Docker Compose (if necessary)
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/2.10.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-
-    - name: Build Docker Image
-      run: docker build -f Dockerfile -t myapp:latest .
-
-    - name: Docker Login
-      run: echo "${{ secrets.REPO_TOKEN }}" | docker login -u ${{ secrets.REPO_USERNAME }} --password-stdin
-
-    - name: Docker Scout Scan
-      run: |
-        curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh -o install-scout.sh
-        sh install-scout.sh
-        docker scout quickview
-        docker scout cves
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: docker-scout-findings
-        path: scout-report.sarif
+       - name: Docker Scout Scan
+         run: |
+           curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh -o install-scout.sh
+           sh install-scout.sh
+           docker login -u pearlgerome -p dckr_pat_1W3H7d9FFm3Ae0aSvBajTQmd9sQ
+           docker scout quickview
+           docker scout cves
+           
